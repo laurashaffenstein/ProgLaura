@@ -23,5 +23,16 @@ def create_series():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response 
 
+@app.route('/delete-series/<int:id>', methods=['DELETE'] )
+def delete_series(id):
+    response = jsonify({"status": "200", "result": "ok", "details": "Serie deleted"})
+    try:
+        Serie.query.filter(Serie.id == id).delete()
+        db.session.commit()
+    except Exception as e:
+        resposta = jsonify({"status": "400" , "result": "error", "details": str(e)})
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
+
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,91 +1,138 @@
-$(function () {
-  changePage('inicial');
-  $('#link-listar').click(function () {
-    $.ajax({
-      url: 'http://localhost:5000/get-series',
-      method: 'GET',
-      dataType: 'json', 
-      success: listSerie, 
-      error: function () {
-        alert('erro ao ler dados, verifique o backend');
-      },
-    });
-  });
+$(function() {
 
-  $('#link-inicial').click(function () {
-    changePage('inicial');
-  });
+  function showSeries() {
 
-  $('#nav-brand').click(function () {
-    changePage('inicial');
-  });
+      $.ajax({
+          url: "http://localhost:5000/get-series",
+          method: "GET",
+          dataType: "json", 
+          success: listSeries, 
+          error: function() {
+              alert("erro ao ler dados, verifique o backend");
+          },
+      });
 
-  $('#btn-incluir').click(function () {
-    const nome = $('#campo-nome').val();
-    const genero = $('#campo-genero').val();
-    const numtemps = $('#campo-numtemps').val();
-    const nota = $('#campo-nota').val();
-    
+      function listSeries(series) {
+          $("#tableBody").empty();
+          showContent("tabela-serie");
+          for (serie of series) {
 
-    const serieData = JSON.stringify({
-      nome: nome,
-      genero: genero,
-      numtemps: numtemps,
-      nota: nota,
-    
-    });
+              var newRow = `<tr id="line_${serie.id}"> 
+                              <td>${serie.nome}</td> 
+                              <td>${serie.genero}</td> 
+                              <td>${serie.numtemps}</td> 
+                              <td>${serie.nota}</td> 
+                              <td>
+                                  <a href="#" id="delete_${serie.id}" class="delete_serie" title="Excluir Série">
+                                          deletar
+                                  </a>
+                              </td>
+                            </tr>`;
 
-    $.ajax({
-      url: 'http://localhost:5000/create-series',
-      type: 'POST',
-      contentType: 'application/json',
-      dataType: 'json',
-      data: serieData,
-      success: createSerie,
-      error: createSerieError,
-    });
-  });
-
-
-  function createSerie(resposta) {
-    if (resposta.result == 'ok') {
-        alert('Serie adicionada com sucesso')
-        $('#campo-nome').val('');
-        $('#campo-genero').val('');
-        $('#campo-numtemps').val('');
-        $('#campo-nota').val('');
-       
-    } else {
-        alert('Erro na adição da Serie!')
-    }
+              $("#tableBody").append(newRow);
+          }
+      }
   }
 
-  function createSerieError(resposta){
-    alert('Erro na chamada do back-end')
+
+  function showContent(nextPage) {
+      $("#inicio").addClass("invisible");
+      $("#tabela-serie").addClass("invisible");
+      $(`#${nextPage}`).removeClass("invisible");
   }
 
-  function listSerie(series) {
-    var rows = '';
+  $("#link-listar").click(function() {
+      showSeries();
+  });
 
-    for (serie of series) {
-      console.log(serie)
-      newRow = `<tr> 
-                        <td>${serie.id}</td> 
-                        <td>${serie.nome}</td> 
-                        <td>${serie.genero}</td> 
-                        <td>${serie.numtemps}</td> 
-                        <td>${serie.nota}</td> 
-                        
-                      </tr>`;
-      rows += newRow;
-      $('#tableBody').html(rows);
-    }
-    changePage('listar');
-  }
+  $("#link-inicial").click(function() {
+      showContent("inicio");
+  });
 
-  function changePage(nextPage) {
-    $('#container-inicial').addClass('invisible');
-    $('#container-listar').addClass('invisible');
-    $(`#container-${nextPage}`).removeClass('invisible');
-  }
+  $("#nav-brand").click(function() {
+      showContent("inicio");
+  });
+
+  $(document).on("click", "#btn-incluir", function() {
+      const nome = $("#campo-nome").val();
+      const genero = $("#campo-genero").val();
+      const numtemps = $("#campo-numtemps").val();
+      const nota = $("#campo-nota").val();
+
+      const serieData = JSON.stringify({
+          nome: nome,
+          genero: genero,
+          numtemps: numtemps,
+          nota: nota,
+      });
+
+      $.ajax({
+          url: "http://localhost:5000/create-series",
+          type: "POST",
+          dataType: "json",
+          contentType: "application/json",
+          data: serieData,
+          success: createdSerie,
+          error: createdSerieError,
+      });
+
+      function createdSerie(resposta) {
+          if (resposta.result == "ok") {
+              $("#campo-nome").val("");
+              $("#campo-genero").val("");
+              $("#campo-numtemps").val("");
+              $("#campo-nota").val("");
+              showSeries();
+              alert("Serie adicionada com sucesso");
+              $(".close").click();
+
+          } else {
+              alert(resposta.result + ':' + resposta.details);
+          }
+      }
+
+
+      function createdSerieError(resposta) {
+          alert("Erro na chamada do back-end");
+      }
+  });
+
+  $('#modal-incluir').on('hidden.bs.modal', function(e) {
+      if (!$('#tabela-serie').hasClass('invisible')) {
+          showSeries();
+      }
+  });
+
+  showContent("inicio");
+
+  $(document).on("click", ".delete_serie", function() {
+      var component = $(this).attr("id");
+
+      var icon_name = "delete_";
+      var serie_id = component.substring(icon_name.length);
+
+      $.ajax({
+          url: 'http://localhost:5000/delete-series/' + serie_id,
+          type: "DELETE",
+          dataType: "json",
+          success: deletedSerie,
+          error: deletedSerieError
+      });
+
+      function deletedSerie(retorno) {
+          if (retorno.result == "ok") {
+              $('#line_' + serie_id).fadeOut(1000, function() {
+                  alert("Serie Removida com Sucesso!");
+                  showSeries();
+              });
+          } else {
+              alert(`${retorno.result}: ${retorno.details}`);
+          }
+      }
+
+      function deletedSerieError(response) {
+          alert("Erro ao excluir dados, verifique o Backend!");
+      }
+  });
+
 });
